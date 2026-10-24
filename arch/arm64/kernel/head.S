@@ -420,7 +420,6 @@ ENDPROC(__create_page_tables)
 __primary_switched:
 	mov	x28, lr				// preserve LR
 
-	adr_l	x8, vectors			// load VBAR_EL1 with virtual
 	msr	vbar_el1, x8			// vector table address
 	isb
 
@@ -438,22 +437,14 @@ __primary_switched:
         adr_l   x5, init_task
         msr     sp_el0, x5                      // Save thread_info
 #else
-	adr_l	sp, initial_sp, x4
+	adrp	x4, initial_sp
+	add	sp, x4, :lo12:initial_sp
 	mov	x4, sp
 	and	x4, x4, #~(THREAD_SIZE - 1)
 	msr	sp_el0, x4			// Save thread_info
 #endif
 
 	str_l	x21, __fdt_pointer, x5		// Save FDT pointer
-
-	ldr_l	x4, kimage_vaddr		// Save the offset between
-	sub	x4, x4, x24			// the kernel virtual and
-	str_l	x4, kimage_voffset, x5		// physical mappings
-
-	mov	x29, #0
-#ifdef CONFIG_KASAN
-	bl	kasan_early_init
-#endif
 #ifdef CONFIG_RANDOMIZE_BASE
 	tst	x23, ~(MIN_KIMG_ALIGN - 1)	// already running randomized?
 	b.ne	0f
